@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class OrderQueueProcessorService {
 
@@ -18,13 +20,17 @@ public class OrderQueueProcessorService {
     OrderRepository orderRepository;
 
     @KafkaListener(topics = "${spring.kafka.template.default-topic}",
-            groupId = "${spring.kafka.consumer.group-id}")
+            groupId = "${spring.kafka.consumer.group-id}",
+            containerFactory = "orderKafkaListenerContainerFactory"
+            )
     public Order consume(Order order) {
-        order.setStatus(OrderStatus.PROCESSED);
-        logger.info("Processing order with ID: " + order.getOrderId());
-        if (orderRepository.findById(order.getOrderId()).isPresent()) {
-            return orderRepository.save(order);
+        Optional<Order> orderData = orderRepository.findById(order.getOrderId());
+        if (orderData.isPresent() && orderData.get().getStatus() == OrderStatus.PLACED) {
+            orderData.get().setStatus(OrderStatus.PROCESSED);
+            orderRepository.save(orderData.get());
+            logger.info("Processing order with ID: " + order.getOrderId());
+            return orderData.get();
         }
-        return orderRepository.insert(order);
+        return null;
     }
 }
