@@ -28,6 +28,7 @@ public class OrderQueueProcessorService {
         if (orderData.isPresent() && orderData.get().getStatus() == OrderStatus.PLACED) {
             orderData.get().setStatus(OrderStatus.PROCESSED);
             orderRepository.save(orderData.get());
+            //Logic to update inventory and place in shipment queue
             logger.info("Processing order with ID: " + order.getOrderId());
             return orderData.get();
         }
